@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ArchWordle — Grade 12</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root {
+  --ink: #1C1E21; --sub: #6B7280; --line: #D8D5CC;
+  --bg: #FAF9F6; --card: #FFFFFF;
+  --accent: #2563EB;
+  --green: #6AAA64; --yellow: #C9B458; --gray: #787C7E;
+  --key-bg: #D3D6DA; --key-text: #1C1E21;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #EDEDED; --sub: #9AA0A6; --line: #3A3A3C;
+    --bg: #121213; --card: #1E1E1F;
+    --key-bg: #565758; --key-text: #EDEDED;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #EDEDED; --sub: #9AA0A6; --line: #3A3A3C;
+  --bg: #121213; --card: #1E1E1F;
+  --key-bg: #565758; --key-text: #EDEDED;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  min-height: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 16px 12px 32px;
+}
+.wrap { width: 100%; max-width: 460px; }
+header { text-align: center; margin-bottom: 6px; }
+h1 { font-size: 22px; font-weight: 800; margin: 4px 0 2px; letter-spacing: -0.02em; }
+.sub { font-size: 13px; color: var(--sub); margin: 0 0 14px; }
+.meta-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.pill { font-size: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--sub); }
+#cycle-select {
+  font-size: 13px; font-weight: 700; color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+  max-width: 100%;
+}
+#board {
+  display: flex; flex-direction: column; gap: 6px; margin: 0 auto 16px;
+  align-items: center;
+}
+.row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+.tile {
+  width: 34px; height: 34px; border: 2px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 700; text-transform: uppercase;
+  border-radius: 4px; background: var(--card); color: var(--ink);
+  transition: transform 0.15s;
+  flex: none;
+}
+.tile.filled { border-color: var(--sub); }
+.tile.green { background: var(--green); border-color: var(--green); color: #fff; }
+.tile.yellow { background: var(--yellow); border-color: var(--yellow); color: #fff; }
+.tile.gray { background: var(--gray); border-color: var(--gray); color: #fff; }
+#message {
+  min-height: 20px; text-align: center; font-size: 14px; font-weight: 700;
+  margin-bottom: 10px; color: var(--accent);
+}
+#keyboard { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.krow { display: flex; gap: 5px; }
+.key {
+  background: var(--key-bg); color: var(--key-text); border: none;
+  border-radius: 4px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+  padding: 0; height: 42px; min-width: 28px; flex: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.key.wide { flex: 1.6; font-size: 10px; }
+.key.symbol { flex: 0.8; font-size: 16px; }
+.key.space { flex: 3; font-size: 11px; }
+.key.green { background: var(--green); color: #fff; }
+.key.yellow { background: var(--yellow); color: #fff; }
+.key.gray { background: var(--gray); color: #fff; }
+#result-panel {
+  display: none; background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px 16px; margin-top: 14px; text-align: center;
+}
+#result-panel.show { display: block; }
+#result-term { font-size: 18px; font-weight: 800; margin: 0 0 4px; }
+#result-def { font-size: 13.5px; color: var(--sub); margin: 0 0 12px; line-height: 1.4; }
+button.action {
+  background: var(--accent); color: #fff; border: none; border-radius: 999px;
+  font-size: 14px; font-weight: 700; padding: 10px 20px; cursor: pointer;
+}
+.back-link {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600;
+  color: var(--sub); text-decoration: none; margin-bottom: 10px;
+}
+.back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<a class="back-link" href="index.html">&larr; Back to Games</a>
+<h1>ArchWordle</h1>
+<p class="sub">Guess this year's architecture vocabulary — one term at a time.</p>
+</header>
+<div class="meta-row">
+  <select id="cycle-select"></select>
+</div>
+<div class="meta-row">
+  <span class="pill" id="length-pill">7 letters</span>
+  <span class="pill" id="guess-pill">Guess 1 of 6</span>
+</div>
+<div id="board"></div>
+<div id="message"></div>
+<div id="keyboard"></div>
+<div id="result-panel">
+  <p id="result-term"></p>
+  <p id="result-def"></p>
+  <button class="action" id="new-word-btn">New word</button>
+</div>
+</div>
+<script>
+const CYCLES = [
+  { num: 1, title: "Building Codes I", words: [
+    {term:"health safety welfare", display:"Health, Safety, Welfare", def:"The three public concerns that building codes exist to protect."},
+    {term:"occupancy group", def:"A category of building use, such as Assembly, Business, or Educational, that the code uses to set requirements."},
+    {term:"building height", def:"The vertical dimension from grade to the roof that codes limit according to a building's use and type of construction."},
+    {term:"building area", def:"The floor area per story within a building's perimeter, which codes limit by use and type of construction."},
+    {term:"walls", def:"A Revit modeling tool for creating the vertical enclosures and partitions of a building."},
+    {term:"floors", def:"A Revit modeling tool for creating the horizontal slabs and decks that separate levels."},
+    {term:"roofs", def:"A Revit modeling tool for creating the top enclosure of a building, whether flat or sloped."},
+  ]},
+  { num: 2, title: "Building Codes II", words: [
+    {term:"type i", display:"Type I", def:"Construction whose major elements are noncombustible, such as concrete, masonry, or steel, with the highest fire-resistance ratings."},
+    {term:"type ii", display:"Type II", def:"Noncombustible construction like the first type, but with lower required fire-resistance ratings."},
+    {term:"type iii", display:"Type III", def:"Construction with noncombustible exterior walls and interior elements of any material the code permits."},
+    {term:"type iv", display:"Type IV", def:"Heavy timber construction: noncombustible exterior walls and solid or laminated wood interiors of specified minimum sizes, with no concealed spaces."},
+    {term:"type v", display:"Type V", def:"Construction whose structural elements and walls may be of any material the code permits."},
+    {term:"heavy timber", def:"Construction using solid or laminated wood members of code-specified minimum sizes, with no concealed spaces."},
+    {term:"mass timber", def:"A category of engineered wood construction using large solid wood panels and beams for structure."},
+    {term:"active systems", def:"Fire protection that responds when a fire occurs, such as sprinklers, alarms, and detectors."},
+    {term:"passive systems", def:"Fire protection built into the structure, such as rated walls and floors, that works without being activated."},
+    {term:"fire wall", def:"A rated barrier that runs continuously from the foundation to above the roof to stop flames spreading from one part of a building to another."},
+    {term:"fire partition", def:"A rated interior barrier that separates spaces such as tenant units and corridors, with less demanding requirements than the most robust type."},
+    {term:"smoke barrier", def:"A continuous wall or membrane designed to resist the movement of fumes from one area to another."},
+    {term:"exit", def:"The enclosed, protected part of the means of egress that links the path leading to it with the discharge to the outside, such as a protected stair."},
+    {term:"exit access", def:"The path from any point in a building to a protected way out, which should be direct, unobstructed, and well lit."},
+    {term:"exit discharge", def:"The part of the means of egress that leads from a protected way out to a safe place outside the building, such as a public way."},
+    {term:"fenestration", def:"The windows, doors, and other openings in a building's exterior walls."},
+    {term:"section cutting tool", def:"A Revit command that slices vertically through the model to produce a view of the building's interior."},
+    {term:"annotation", def:"Notes and graphic marks added to a drawing to explain it, such as text, dimensions, and labels."},
+    {term:"text", def:"Written words placed on a drawing to give notes or instructions."},
+    {term:"dimensions", def:"Measurements shown on a drawing with lines and numbers to give size and distance."},
+    {term:"labels", def:"Tags attached to model elements that identify them on a drawing, such as room names or door numbers."},
+    {term:"symbols", def:"Standard graphic marks that represent objects, materials, or references on drawings."},
+  ]},
+  { num: 3, title: "Accessible Design", words: [
+    {term:"accessible routes", def:"Continuous, unobstructed paths that people with disabilities can use to reach and move through a building and its site."},
+    {term:"walking surface", def:"A path for pedestrian travel, such as a floor, whose clear width and slopes the ADA limits."},
+    {term:"doors", def:"Openings that, under the ADA, must provide 32 inches of clear width when the panel is open 90 degrees."},
+    {term:"ramps", def:"Sloped walking surfaces with a running slope no steeper than 1:12 and no more than 30 inches of rise per run."},
+    {term:"elevators", def:"Passenger lifts meeting ASME A17.1 that connect floors along an accessible route."},
+    {term:"stairs", def:"Flights of steps whose risers must be uniform and between 4 and 7 inches high, with treads at least 11 inches deep."},
+    {term:"handrails", def:"Rails along ramps and flights of steps whose gripping surface sits 34 to 38 inches above the walking surface."},
+    {term:"grab bars", def:"Horizontal or vertical rails mounted in toilet and bathing rooms to help people transfer and keep their balance."},
+    {term:"toilet compartment", def:"An enclosed stall that holds a water closet, built to wheelchair accessible or ambulatory dimensions."},
+    {term:"clear floor space", def:"The unobstructed area, at least 30 by 48 inches under the 2010 ADA, needed to approach an element in a wheelchair."},
+    {term:"maneuvering clearance", def:"The clear space beside or in front of a door or fixture that lets a person using a wheelchair approach and operate it."},
+    {term:"sheet layout", def:"In Revit, the arrangement of views on a plotted page."},
+    {term:"title blocks", def:"The area on a sheet that holds the project name, sheet number, date, and other drawing information."},
+    {term:"family", def:"In Revit, a group of elements, such as a door, that share parameters and may come in several types."},
+    {term:"properties", def:"In Revit, the settings that describe an element or view, such as its type, dimensions, and materials."},
+  ]},
+  { num: 4, title: "Site Analysis & Design", words: [
+    {term:"zoning district", def:"An area of a municipality where one set of land-use and building regulations applies."},
+    {term:"allowed uses", def:"The kinds of activity a zoning ordinance permits on a site."},
+    {term:"bulk requirements", def:"Zoning limits on a building's size and placement, such as height, coverage, floor area, and setbacks."},
+    {term:"set back", def:"The minimum distance a zoning ordinance requires between a building and a property line."},
+    {term:"coverage", def:"The share of a lot, as a percentage, that a building's footprint is allowed to occupy."},
+    {term:"height", def:"A zoning limit on how tall a building may be."},
+    {term:"solar orientation", def:"The direction a building and its spaces face relative to the path of the sun."},
+    {term:"wind", def:"Moving air whose prevailing direction and speed influence how a building is sited and shaped."},
+    {term:"flora", def:"The plant life found on a site."},
+    {term:"fauna", def:"The animal life found on a site."},
+    {term:"topography", def:"The shape of the land's surface, including its slopes and changes in elevation."},
+    {term:"wetlands", def:"Land saturated with water, such as marshes, that often must be protected and can limit the buildable area of a site."},
+    {term:"cut and fill", def:"Earthwork that removes soil from high areas and places it in low areas to reshape a site; designers try to balance the two."},
+    {term:"grading", def:"Reshaping the ground surface to set the slopes needed for drainage and construction."},
+    {term:"hardscapes", def:"Paved or built site surfaces such as parking lots, walkways, and plazas."},
+    {term:"pervious", def:"Describes a surface, such as porous paving, that lets rain soak through instead of running off."},
+    {term:"impervious", def:"Not allowing water to soak through, so rain runs off, as on roofs and asphalt."},
+    {term:"native species", def:"Plants that occur naturally in a region and are best preserved on a site during construction."},
+    {term:"invasive species", def:"Non-native plants that spread aggressively and harm local ecosystems."},
+    {term:"stormwater management", def:"Strategies for controlling and treating rain runoff, such as swales, holding ponds, and pervious paving."},
+    {term:"boundary survey", def:"A land measurement record that establishes a property's legal boundary lines and corners."},
+    {term:"existing survey", def:"A land measurement record of a site's current buildings, utilities, and topography."},
+    {term:"as-built survey", def:"A land measurement record made after construction to show where things were actually put up."},
+    {term:"elevation", def:"The height of a point on the land above a reference level such as a benchmark."},
+    {term:"angles", def:"In surveying, the measure of turn between two lines, used to describe the corners of a boundary."},
+    {term:"areas", def:"In surveying, the size of a parcel of land, measured in square feet or acres."},
+    {term:"distance", def:"In surveying, the length between two points, measured along the ground."},
+    {term:"type properties", def:"In Revit, the settings shared by every element of one kind, such as a wall's layers and thickness."},
+    {term:"central model", def:"In Revit, the master project file that team members copy to local files so several people can work at once."},
+    {term:"massing", def:"A simple three-dimensional form used to study a building's overall shape and volume."},
+    {term:"massing in place", def:"In Revit, a conceptual form modeled directly in the project to study a building's shape on its site."},
+  ]},
+  { num: 5, title: "Materials & Assemblies", words: [
+    {term:"control layers", def:"The layers of a building assembly that control the movement of water, air, heat, and vapor."},
+    {term:"curtain walls", def:"Exterior enclosures held up by the structural frame that carry only their own weight and wind loads."},
+    {term:"steel framing", def:"A skeleton of columns, beams, and girders, usually cut and drilled in a shop, that carries a building's loads."},
+    {term:"open web truss", def:"A lightweight steel member with a zigzag web between its top and bottom chords, used to span floors and roofs."},
+    {term:"structural steel shapes", def:"Standard rolled profiles, such as angles, channels, and I-shaped members, used to make building frames."},
+    {term:"wide flange beam", def:"A steel member shaped like an I or H with broad parallel plates at top and bottom, called a W shape."},
+    {term:"castellated beam", def:"A steel member cut and rewelded to make a deeper section with openings along its web."},
+    {term:"cast in place", def:"Concrete poured and cured in forms at its final location on the site."},
+    {term:"pre-cast", def:"Concrete elements formed and cured off site, then delivered and erected."},
+    {term:"pre-stressed", def:"Concrete reinforced with high-strength steel that is tensioned to keep the concrete under compression."},
+    {term:"cmu", display:"CMU", def:"A hollow concrete block, called a concrete masonry unit, used to build walls."},
+    {term:"brick", def:"A small kiln-fired clay unit laid in courses with mortar to build masonry walls."},
+    {term:"cavity wall", def:"A masonry enclosure made of two layers separated by an air space, which is often insulated."},
+    {term:"glu-lam", display:"Glu-Lam", def:"Glued-laminated timber: layers of lumber bonded with adhesive to make a large beam or column."},
+    {term:"cross-laminated timber", def:"An engineered wood panel made of layers of boards stacked at right angles and glued together."},
+    {term:"dowel-laminated timber", def:"An engineered wood panel made of boards joined with hardwood pins instead of glue."},
+    {term:"hvac systems", display:"HVAC systems", def:"Heating, ventilating, and air-conditioning equipment that conditions a building's indoor air."},
+    {term:"variable air volume", def:"A system that varies the flow of conditioned air with dampers to meet each zone's temperature needs."},
+    {term:"boiler", def:"A heating appliance that heats water, or makes steam, to send warmth through pipes."},
+    {term:"air handler", def:"Equipment that conditions air and circulates it through a building's ductwork."},
+    {term:"chiller", def:"Equipment that cools water for use in a building's air-conditioning system."},
+    {term:"vent stack", def:"A vertical plumbing pipe that admits air to the drainage system to protect trap seals."},
+    {term:"riser diagrams", def:"Drawings that show a building's vertical piping or wiring runs between floors."},
+    {term:"reverberation", def:"The persistence of sound in a room after its source stops, caused by repeated reflections."},
+    {term:"sound absorption", def:"The ability of a material to take in acoustic energy instead of reflecting it."},
+    {term:"sound isolation", def:"Reducing the transmission of noise from one space to another."},
+    {term:"diffusion", def:"The scattering of sound waves in many directions rather than reflecting them in one."},
+    {term:"natural light", def:"Daylight that enters a building through windows and skylights."},
+    {term:"artificial light", def:"Illumination produced by lamps and fixtures rather than by the sun."},
+    {term:"lighting levels", def:"The amount of illumination recommended for a visual task, measured in foot-candles or lux."},
+    {term:"lighting controls", def:"Switches, dimmers, and sensors that decide when and how much light is on."},
+    {term:"assembly layers", def:"The stacked materials that make up a wall, floor, or roof, defined one by one in a Revit type."},
+    {term:"materials", def:"In Revit, named surface and physical definitions, such as brick or concrete, assigned to elements."},
+    {term:"material properties", def:"The appearance and physical settings of a surface finish in Revit, such as color and texture."},
+    {term:"rendering properties", def:"Settings that control how a surface looks in a Revit image, such as reflectivity and gloss."},
+    {term:"drafting views", def:"In Revit, two-dimensional environments used to draw details that are not part of the 3D model."},
+    {term:"cut profile", def:"In Revit, the outline of an element where a plan or section cuts through it."},
+    {term:"detail lines", def:"In Revit, two-dimensional strokes drawn in a single view to add detail without modeling it."},
+    {term:"patterns", def:"In Revit, repeating line or fill designs that represent materials in drawings."},
+    {term:"visibility graphics", def:"In Revit, the settings that control which elements appear in a view and how they display."},
+  ]},
+  { num: 6, title: "Commercial Energy Efficiency", words: [
+    {term:"iecc", display:"IECC", def:"The model code, called the International Energy Conservation Code, that sets minimum energy efficiency requirements for buildings."},
+    {term:"r-value", display:"R-Value", def:"A measure of a material's resistance to heat flow; higher numbers insulate better."},
+    {term:"u-value", display:"U-Value", def:"A measure of how readily heat passes through an assembly; it equals one divided by the total resistance."},
+    {term:"heat gain coefficient", display:"Heat Gain Coefficient", def:"The fraction of the sun's heat that passes through a window, abbreviated SHGC."},
+    {term:"location", def:"A sustainability category about choosing building sites that connect well to the surrounding community."},
+    {term:"transportation", def:"A sustainability category about reducing reliance on cars through transit and walkable access."},
+    {term:"sustainable site", def:"A LEED category about reducing construction pollution, choosing suitable land, protecting habitat, and managing runoff."},
+    {term:"water efficiency", def:"A LEED category about using less drinking water through efficient fixtures, rainwater capture, and graywater."},
+    {term:"energy and atmosphere", def:"A LEED category about improving how efficiently buildings acquire and use power, using renewables, and reducing harmful emissions."},
+    {term:"materials and resources", def:"A LEED category about using local, rapidly renewable, and recycled products and cutting waste."},
+    {term:"indoor environmental quality", def:"A LEED category about the air, daylight, comfort, and control that occupants experience inside."},
+    {term:"carbon sequestration", def:"Capturing and storing atmospheric carbon dioxide, for example in growing trees or in wood products."},
+    {term:"passive house", display:"Passive House", def:"A rigorous energy standard that uses a very airtight, well-insulated envelope to cut heating and cooling needs."},
+    {term:"net zero", display:"Net Zero", def:"Describes a building that produces as much energy as it uses over the course of a year."},
+  ]},
+  { num: 7, title: "Construction Documents I", words: [
+    {term:"cover sheet", def:"The first page of a drawing set, listing the project name, the design team, and an index of sheets."},
+    {term:"specifications", def:"Written descriptions of materials, products, and workmanship that accompany the drawings."},
+    {term:"code sheet", def:"A page that summarizes the building code analysis, such as occupancy, construction type, and egress."},
+    {term:"survey", def:"A drawing by a licensed land professional that shows a site's boundaries, topography, and features."},
+    {term:"demo plans", def:"Drawings that show which existing structures and elements are to be removed."},
+    {term:"site drawings", def:"Plans that show a property's layout, including the building, paving, grading, and utilities."},
+    {term:"foundation plan", def:"A structural drawing that shows the locations and sizes of footings and below-grade walls."},
+    {term:"framing plan", def:"A structural drawing that shows the layout of beams, joists, and columns supporting a floor or roof."},
+    {term:"structural details", def:"Enlarged drawings that show how load-carrying members connect and are reinforced."},
+  ]},
+  { num: 8, title: "Construction Documents II", words: [
+    {term:"floor plans", def:"Drawings of a building cut horizontally and viewed from above to show walls, openings, and rooms."},
+    {term:"elevations", def:"Drawings of a building's faces seen straight on from the side."},
+    {term:"sections", def:"Drawings made by slicing vertically through a building to show its interior and structure."},
+    {term:"wall sections", def:"Detailed vertical cuts through an exterior enclosure showing its layers from foundation to roof."},
+    {term:"details", def:"Enlarged drawings that show how parts of a building are put together."},
+    {term:"interior elevations", def:"Drawings of the walls inside a room, showing cabinets, finishes, and fixtures."},
+    {term:"schedules", def:"Tables on a drawing set that list items such as doors, windows, or finishes and their characteristics."},
+    {term:"mechanical plans", def:"Drawings that show heating, ventilating, and air-conditioning equipment and ductwork."},
+    {term:"electrical plans", def:"Drawings that show power, lighting, and outlet locations and their circuits."},
+    {term:"reflected ceiling plan", def:"A drawing made as though looking up at the overhead surface, showing lights, grids, and other ceiling elements."},
+    {term:"plumbing plans", def:"Drawings that show water supply piping, drainage, vents, and fixtures."},
+    {term:"fire protection plans", def:"Drawings that show sprinklers, standpipes, and other suppression layouts."},
+  ]},
+  { num: 9, title: "Portfolio & Marketing", words: [
+    {term:"portfolio", def:"A curated collection of a designer's best work, used to show skills to employers or schools."},
+    {term:"cover letter", def:"A message sent with a resume that introduces the applicant and explains interest in a position."},
+    {term:"resume", def:"A short summary of a person's education, skills, and work experience."},
+    {term:"professional conduct", def:"Workplace behavior such as honesty, respect, punctuality, and appropriate dress and communication."},
+    {term:"marketing", def:"Activities that promote a person's or a firm's services to potential clients or employers."},
+    {term:"social media awareness", def:"Understanding that public posts shape how employers and clients see you."},
+    {term:"networking", def:"Building professional relationships that can lead to jobs, referrals, and advice."},
+    {term:"website", def:"An online portfolio or firm page that shows work and gives contact information."},
+  ]},
+  { num: 10, title: "Project Management & Affiliations", words: [
+    {term:"aia", display:"AIA", def:"The American Institute of Architects, the national professional association for architects."},
+    {term:"aias", display:"AIAS", def:"The American Institute of Architecture Students, the national organization for architecture students."},
+    {term:"ncarb", display:"NCARB", def:"The National Council of Architectural Registration Boards, which sets standards for architect licensure."},
+    {term:"asid", display:"ASID", def:"The American Society of Interior Designers, a professional association for interior designers."},
+    {term:"asla", display:"ASLA", def:"The American Society of Landscape Architects, a professional association for landscape architects."},
+    {term:"osha", display:"OSHA", def:"The federal agency, the Occupational Safety and Health Administration, that sets workplace safety standards, including for construction sites."},
+    {term:"construction administration", def:"The architect's services while a project is being built, such as site visits, reviewing submittals, and answering contractor questions."},
+    {term:"site visit", def:"An architect's trip to a construction location to observe progress and compare it with the contract documents."},
+    {term:"shop drawings", def:"Detailed fabrication documents prepared by a contractor or supplier showing how a component will be made and installed."},
+  ]},
+];
+
+const MAX_GUESSES = 6;
+let target, guesses, currentGuess, gameOver, wordLen;
+
+function populateCycleSelect() {
+  const sel = document.getElementById("cycle-select");
+  const allOpt = document.createElement("option");
+  allOpt.value = "all";
+  allOpt.textContent = "All Cycles";
+  sel.appendChild(allOpt);
+  CYCLES.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = String(c.num);
+    const rangeLabel = c.num === 1 ? "Cycle 1" : "Cycles 1\u2013" + c.num;
+    opt.textContent = rangeLabel + " \u2014 through " + c.title;
+    sel.appendChild(opt);
+  });
+  sel.value = "all";
+  sel.addEventListener("change", startGame);
+}
+
+function dedupedPool(cycleList) {
+  const seen = new Set();
+  const pool = [];
+  cycleList.forEach(c => c.words.forEach(w => {
+    if (!seen.has(w.term)) { seen.add(w.term); pool.push(w); }
+  }));
+  return pool;
+}
+
+function getActivePool() {
+  const sel = document.getElementById("cycle-select");
+  if (sel.value === "all") {
+    return dedupedPool(CYCLES);
+  }
+  const selectedNum = parseInt(sel.value, 10);
+  const cumulativeCycles = CYCLES.filter(c => c.num <= selectedNum);
+  return dedupedPool(cumulativeCycles);
+}
+
+function pickWord() {
+  const pool = getActivePool();
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function startGame() {
+  const entry = pickWord();
+  target = entry;
+  wordLen = entry.term.length;
+  guesses = [];
+  currentGuess = new Array(wordLen).fill("");
+  gameOver = false;
+  document.getElementById("result-panel").classList.remove("show");
+  document.getElementById("message").textContent = "";
+  const wordCount = entry.term.split(/[\s\-\/]+/).length;
+  document.getElementById("length-pill").textContent = wordLen + " characters" + (wordCount > 1 ? " \u00b7 " + wordCount + " words" : "");
+  document.getElementById("guess-pill").textContent = "Guess 1 of " + MAX_GUESSES;
+  renderBoard();
+  renderKeyboard();
+}
+
+function renderBoard() {
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  for (let r = 0; r < MAX_GUESSES; r++) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const guessData = guesses[r];
+    const isCurrent = r === guesses.length;
+    for (let c = 0; c < wordLen; c++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      let letter = "";
+      if (guessData) {
+        letter = guessData.chars[c];
+        tile.classList.add(guessData.states[c]);
+      } else if (isCurrent && currentGuess[c]) {
+        letter = currentGuess[c];
+        tile.classList.add("filled");
+      }
+      tile.textContent = letter === " " ? "\u2423" : letter;
+      row.appendChild(tile);
+    }
+    board.appendChild(row);
+  }
+}
+
+function evaluateGuess(guessChars) {
+  const targetChars = target.term.toLowerCase().split("");
+  const states = new Array(wordLen).fill("gray");
+  const counts = {};
+  targetChars.forEach(ch => { counts[ch] = (counts[ch] || 0) + 1; });
+
+  for (let i = 0; i < wordLen; i++) {
+    if (guessChars[i] === targetChars[i]) {
+      states[i] = "green";
+      counts[guessChars[i]]--;
+    }
+  }
+  for (let i = 0; i < wordLen; i++) {
+    if (states[i] === "green") continue;
+    const ch = guessChars[i];
+    if (counts[ch] > 0) {
+      states[i] = "yellow";
+      counts[ch]--;
+    }
+  }
+  return { chars: guessChars, states };
+}
+
+const keyStateRank = { gray: 0, yellow: 1, green: 2 };
+const keyStates = {};
+
+function updateKeyStates(evaluated) {
+  evaluated.chars.forEach((ch, i) => {
+    const st = evaluated.states[i];
+    const existing = keyStates[ch];
+    if (!existing || keyStateRank[st] > keyStateRank[existing]) {
+      keyStates[ch] = st;
+    }
+  });
+}
+
+function renderKeyboard() {
+  const rows = ["qwertyuiop", "asdfghjkl", "ENTERzxcvbnmBACK", "SYMBOLS"];
+  const kb = document.getElementById("keyboard");
+  kb.innerHTML = "";
+  rows.forEach(rowStr => {
+    const krow = document.createElement("div");
+    krow.className = "krow";
+    if (rowStr === "SYMBOLS") {
+      const symbolKeys = [
+        { key: "-", label: "-", cls: "symbol" },
+        { key: " ", label: "space", cls: "space" },
+        { key: "/", label: "/", cls: "symbol" },
+      ];
+      symbolKeys.forEach(sk => {
+        const btn = document.createElement("button");
+        btn.className = "key " + sk.cls;
+        btn.textContent = sk.label;
+        if (keyStates[sk.key]) btn.classList.add(keyStates[sk.key]);
+        btn.addEventListener("click", () => handleKey(sk.key));
+        krow.appendChild(btn);
+      });
+      kb.appendChild(krow);
+      return;
+    }
+    let keys;
+    if (rowStr.includes("ENTER")) {
+      keys = ["ENTER", ...rowStr.replace("ENTER", "").replace("BACK", "").split(""), "BACK"];
+    } else {
+      keys = rowStr.split("");
+    }
+    keys.forEach(k => {
+      const btn = document.createElement("button");
+      btn.className = "key" + ((k === "ENTER" || k === "BACK") ? " wide" : "");
+      btn.textContent = k === "BACK" ? "\u232B" : (k === "ENTER" ? "Enter" : k);
+      if (k.length === 1 && keyStates[k]) {
+        btn.classList.add(keyStates[k]);
+      }
+      btn.addEventListener("click", () => handleKey(k === "ENTER" ? "Enter" : (k === "BACK" ? "Backspace" : k)));
+      krow.appendChild(btn);
+    });
+    kb.appendChild(krow);
+  });
+}
+
+function showMessage(text) {
+  const el = document.getElementById("message");
+  el.textContent = text;
+  if (text) setTimeout(() => { if (el.textContent === text) el.textContent = ""; }, 1800);
+}
+
+function handleKey(key) {
+  if (gameOver) return;
+  if (key === "Enter") {
+    if (currentGuess.some(c => !c)) {
+      showMessage("Not enough characters");
+      return;
+    }
+    const evaluated = evaluateGuess(currentGuess.slice());
+    guesses.push(evaluated);
+    updateKeyStates(evaluated);
+    const won = currentGuess.join("") === target.term.toLowerCase();
+    currentGuess = new Array(wordLen).fill("");
+    renderBoard();
+    renderKeyboard();
+
+    if (won) {
+      gameOver = true;
+      endGame(true);
+      return;
+    }
+    if (guesses.length >= MAX_GUESSES) {
+      gameOver = true;
+      endGame(false);
+      return;
+    }
+    document.getElementById("guess-pill").textContent = "Guess " + (guesses.length + 1) + " of " + MAX_GUESSES;
+  } else if (key === "Backspace") {
+    for (let i = wordLen - 1; i >= 0; i--) {
+      if (currentGuess[i]) { currentGuess[i] = ""; break; }
+    }
+    renderBoard();
+  } else if (/^[a-z \-\/]$/i.test(key) && key.length === 1) {
+    for (let i = 0; i < wordLen; i++) {
+      if (!currentGuess[i]) { currentGuess[i] = key.toLowerCase(); break; }
+    }
+    renderBoard();
+  }
+}
+
+function endGame(won) {
+  document.getElementById("message").textContent = won ? "Nice work!" : "Out of guesses";
+  const panel = document.getElementById("result-panel");
+  document.getElementById("result-term").textContent = target.display || (target.term.charAt(0).toUpperCase() + target.term.slice(1));
+  document.getElementById("result-def").textContent = target.def;
+  panel.classList.add("show");
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleKey("Enter");
+  else if (e.key === "Backspace") handleKey("Backspace");
+  else if (e.key === " ") { e.preventDefault(); handleKey(" "); }
+  else if (e.key === "-" || e.key === "/") handleKey(e.key);
+  else if (/^[a-zA-Z]$/.test(e.key)) handleKey(e.key.toLowerCase());
+});
+
+document.getElementById("new-word-btn").addEventListener("click", startGame);
+
+populateCycleSelect();
+const urlParams = new URLSearchParams(window.location.search);
+const cycleParam = urlParams.get("cycle");
+if (cycleParam && (cycleParam === "all" || CYCLES.some(c => String(c.num) === cycleParam))) {
+  document.getElementById("cycle-select").value = cycleParam;
+}
+startGame();
+</script>
+</body>
+</html>

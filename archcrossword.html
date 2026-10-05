@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ArchCrossword — Grade 12</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root {
+  --ink: #1C1E21; --sub: #6B7280; --line: #D8D5CC;
+  --bg: #FAF9F6; --card: #FFFFFF;
+  --accent: #2563EB; --accent-soft: #EFF4FF;
+  --good: #15803D; --bad: #B91C1C;
+  --cell-bg: #FFFFFF; --cell-block: transparent;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #EDEDED; --sub: #9AA0A6; --line: #3A3A3C;
+    --bg: #121213; --card: #1E1E1F; --accent-soft: #1B2A4A;
+    --cell-bg: #2A2A2C;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #EDEDED; --sub: #9AA0A6; --line: #3A3A3C;
+  --bg: #121213; --card: #1E1E1F; --accent-soft: #1B2A4A;
+  --cell-bg: #2A2A2C;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  min-height: 100%;
+  padding: 16px 12px 40px;
+}
+.wrap { max-width: 720px; margin: 0 auto; }
+header { text-align: center; margin-bottom: 10px; }
+h1 { font-size: 22px; font-weight: 800; margin: 4px 0 2px; letter-spacing: -0.02em; }
+.sub { font-size: 13px; color: var(--sub); margin: 0 0 14px; }
+.controls-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+#cycle-select {
+  font-size: 13px; font-weight: 700; color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+  max-width: 100%;
+}
+button.action {
+  background: var(--accent); color: #fff; border: none; border-radius: 999px;
+  font-size: 13px; font-weight: 700; padding: 8px 16px; cursor: pointer;
+}
+button.action.secondary { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+#message { text-align: center; font-size: 13.5px; font-weight: 700; color: var(--accent); min-height: 18px; margin-bottom: 10px; }
+#grid-wrap { overflow-x: auto; display: flex; margin-bottom: 18px; -webkit-overflow-scrolling: touch; }
+#grid {
+  margin: 0 auto; flex: 0 0 auto;
+  display: grid; gap: 1px; background: var(--line); border: 2px solid var(--line);
+}
+.cell {
+  position: relative; background: var(--cell-bg); width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cell.block { background: transparent; }
+.cell input {
+  width: 100%; height: 100%; border: none; background: transparent; text-align: center;
+  font-size: 15px; font-weight: 700; text-transform: uppercase; color: var(--ink);
+  padding: 0; outline: none;
+}
+.cell .num { position: absolute; top: 1px; left: 2px; font-size: 8px; font-weight: 700; color: var(--sub); }
+.cell.active { background: var(--accent-soft); }
+.cell.correct input { color: var(--good); }
+.cell.incorrect input { color: var(--bad); }
+.clues { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.clue-col { flex: 1; min-width: 240px; max-width: 340px; }
+.clue-col h3 { font-size: 14px; margin: 0 0 8px; color: var(--accent); }
+.clue-item { font-size: 12.5px; margin-bottom: 7px; line-height: 1.35; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.clue-item.active { background: var(--accent-soft); }
+.clue-item b { color: var(--ink); }
+#result-panel {
+  display: none; background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px 16px; margin-top: 16px;
+}
+#result-panel.show { display: block; }
+#result-panel h3 { font-size: 15px; margin: 0 0 10px; }
+.reveal-item { font-size: 12.5px; margin-bottom: 6px; }
+.reveal-item b { color: var(--accent); }
+.back-link {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600;
+  color: var(--sub); text-decoration: none; margin-bottom: 10px;
+}
+.back-link:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<a class="back-link" href="index.html">&larr; Back to Games</a>
+<h1>ArchCrossword</h1>
+<p class="sub">This year's architecture vocabulary, cycle by cycle.</p>
+</header>
+<div class="controls-row">
+  <select id="cycle-select"></select>
+  <button class="action" id="new-puzzle-btn">New Puzzle</button>
+  <button class="action secondary" id="check-btn">Check</button>
+  <button class="action secondary" id="reveal-btn">Reveal</button>
+</div>
+<div id="message"></div>
+<div id="grid-wrap"><div id="grid"></div></div>
+<div class="clues">
+  <div class="clue-col"><h3>Across</h3><div id="across-list"></div></div>
+  <div class="clue-col"><h3>Down</h3><div id="down-list"></div></div>
+</div>
+<div id="result-panel">
+  <h3>Full Solution</h3>
+  <div id="reveal-list"></div>
+</div>
+</div>
+<script>
+const CYCLES = [
+  { num: 1, title: "Building Codes I", words: [
+    {term:"health safety welfare", display:"Health, Safety, Welfare", def:"The three public concerns that building codes exist to protect."},
+    {term:"occupancy group", def:"A category of building use, such as Assembly, Business, or Educational, that the code uses to set requirements."},
+    {term:"building height", def:"The vertical dimension from grade to the roof that codes limit according to a building's use and type of construction."},
+    {term:"building area", def:"The floor area per story within a building's perimeter, which codes limit by use and type of construction."},
+    {term:"walls", def:"A Revit modeling tool for creating the vertical enclosures and partitions of a building."},
+    {term:"floors", def:"A Revit modeling tool for creating the horizontal slabs and decks that separate levels."},
+    {term:"roofs", def:"A Revit modeling tool for creating the top enclosure of a building, whether flat or sloped."},
+  ]},
+  { num: 2, title: "Building Codes II", words: [
+    {term:"type i", display:"Type I", def:"Construction whose major elements are noncombustible, such as concrete, masonry, or steel, with the highest fire-resistance ratings."},
+    {term:"type ii", display:"Type II", def:"Noncombustible construction like the first type, but with lower required fire-resistance ratings."},
+    {term:"type iii", display:"Type III", def:"Construction with noncombustible exterior walls and interior elements of any material the code permits."},
+    {term:"type iv", display:"Type IV", def:"Heavy timber construction: noncombustible exterior walls and solid or laminated wood interiors of specified minimum sizes, with no concealed spaces."},
+    {term:"type v", display:"Type V", def:"Construction whose structural elements and walls may be of any material the code permits."},
+    {term:"heavy timber", def:"Construction using solid or laminated wood members of code-specified minimum sizes, with no concealed spaces."},
+    {term:"mass timber", def:"A category of engineered wood construction using large solid wood panels and beams for structure."},
+    {term:"active systems", def:"Fire protection that responds when a fire occurs, such as sprinklers, alarms, and detectors."},
+    {term:"passive systems", def:"Fire protection built into the structure, such as rated walls and floors, that works without being activated."},
+    {term:"fire wall", def:"A rated barrier that runs continuously from the foundation to above the roof to stop flames spreading from one part of a building to another."},
+    {term:"fire partition", def:"A rated interior barrier that separates spaces such as tenant units and corridors, with less demanding requirements than the most robust type."},
+    {term:"smoke barrier", def:"A continuous wall or membrane designed to resist the movement of fumes from one area to another."},
+    {term:"exit", def:"The enclosed, protected part of the means of egress that links the path leading to it with the discharge to the outside, such as a protected stair."},
+    {term:"exit access", def:"The path from any point in a building to a protected way out, which should be direct, unobstructed, and well lit."},
+    {term:"exit discharge", def:"The part of the means of egress that leads from a protected way out to a safe place outside the building, such as a public way."},
+    {term:"fenestration", def:"The windows, doors, and other openings in a building's exterior walls."},
+    {term:"section cutting tool", def:"A Revit command that slices vertically through the model to produce a view of the building's interior."},
+    {term:"annotation", def:"Notes and graphic marks added to a drawing to explain it, such as text, dimensions, and labels."},
+    {term:"text", def:"Written words placed on a drawing to give notes or instructions."},
+    {term:"dimensions", def:"Measurements shown on a drawing with lines and numbers to give size and distance."},
+    {term:"labels", def:"Tags attached to model elements that identify them on a drawing, such as room names or door numbers."},
+    {term:"symbols", def:"Standard graphic marks that represent objects, materials, or references on drawings."},
+  ]},
+  { num: 3, title: "Accessible Design", words: [
+    {term:"accessible routes", def:"Continuous, unobstructed paths that people with disabilities can use to reach and move through a building and its site."},
+    {term:"walking surface", def:"A path for pedestrian travel, such as a floor, whose clear width and slopes the ADA limits."},
+    {term:"doors", def:"Openings that, under the ADA, must provide 32 inches of clear width when the panel is open 90 degrees."},
+    {term:"ramps", def:"Sloped walking surfaces with a running slope no steeper than 1:12 and no more than 30 inches of rise per run."},
+    {term:"elevators", def:"Passenger lifts meeting ASME A17.1 that connect floors along an accessible route."},
+    {term:"stairs", def:"Flights of steps whose risers must be uniform and between 4 and 7 inches high, with treads at least 11 inches deep."},
+    {term:"handrails", def:"Rails along ramps and flights of steps whose gripping surface sits 34 to 38 inches above the walking surface."},
+    {term:"grab bars", def:"Horizontal or vertical rails mounted in toilet and bathing rooms to help people transfer and keep their balance."},
+    {term:"toilet compartment", def:"An enclosed stall that holds a water closet, built to wheelchair accessible or ambulatory dimensions."},
+    {term:"clear floor space", def:"The unobstructed area, at least 30 by 48 inches under the 2010 ADA, needed to approach an element in a wheelchair."},
+    {term:"maneuvering clearance", def:"The clear space beside or in front of a door or fixture that lets a person using a wheelchair approach and operate it."},
+    {term:"sheet layout", def:"In Revit, the arrangement of views on a plotted page."},
+    {term:"title blocks", def:"The area on a sheet that holds the project name, sheet number, date, and other drawing information."},
+    {term:"family", def:"In Revit, a group of elements, such as a door, that share parameters and may come in several types."},
+    {term:"properties", def:"In Revit, the settings that describe an element or view, such as its type, dimensions, and materials."},
+  ]},
+  { num: 4, title: "Site Analysis & Design", words: [
+    {term:"zoning district", def:"An area of a municipality where one set of land-use and building regulations applies."},
+    {term:"allowed uses", def:"The kinds of activity a zoning ordinance permits on a site."},
+    {term:"bulk requirements", def:"Zoning limits on a building's size and placement, such as height, coverage, floor area, and setbacks."},
+    {term:"set back", def:"The minimum distance a zoning ordinance requires between a building and a property line."},
+    {term:"coverage", def:"The share of a lot, as a percentage, that a building's footprint is allowed to occupy."},
+    {term:"height", def:"A zoning limit on how tall a building may be."},
+    {term:"solar orientation", def:"The direction a building and its spaces face relative to the path of the sun."},
+    {term:"wind", def:"Moving air whose prevailing direction and speed influence how a building is sited and shaped."},
+    {term:"flora", def:"The plant life found on a site."},
+    {term:"fauna", def:"The animal life found on a site."},
+    {term:"topography", def:"The shape of the land's surface, including its slopes and changes in elevation."},
+    {term:"wetlands", def:"Land saturated with water, such as marshes, that often must be protected and can limit the buildable area of a site."},
+    {term:"cut and fill", def:"Earthwork that removes soil from high areas and places it in low areas to reshape a site; designers try to balance the two."},
+    {term:"grading", def:"Reshaping the ground surface to set the slopes needed for drainage and construction."},
+    {term:"hardscapes", def:"Paved or built site surfaces such as parking lots, walkways, and plazas."},
+    {term:"pervious", def:"Describes a surface, such as porous paving, that lets rain soak through instead of running off."},
+    {term:"impervious", def:"Not allowing water to soak through, so rain runs off, as on roofs and asphalt."},
+    {term:"native species", def:"Plants that occur naturally in a region and are best preserved on a site during construction."},
+    {term:"invasive species", def:"Non-native plants that spread aggressively and harm local ecosystems."},
+    {term:"stormwater management", def:"Strategies for controlling and treating rain runoff, such as swales, holding ponds, and pervious paving."},
+    {term:"boundary survey", def:"A land measurement record that establishes a property's legal boundary lines and corners."},
+    {term:"existing survey", def:"A land measurement record of a site's current buildings, utilities, and topography."},
+    {term:"as-built survey", def:"A land measurement record made after construction to show where things were actually put up."},
+    {term:"elevation", def:"The height of a point on the land above a reference level such as a benchmark."},
+    {term:"angles", def:"In surveying, the measure of turn between two lines, used to describe the corners of a boundary."},
+    {term:"areas", def:"In surveying, the size of a parcel of land, measured in square feet or acres."},
+    {term:"distance", def:"In surveying, the length between two points, measured along the ground."},
+    {term:"type properties", def:"In Revit, the settings shared by every element of one kind, such as a wall's layers and thickness."},
+    {term:"central model", def:"In Revit, the master project file that team members copy to local files so several people can work at once."},
+    {term:"massing", def:"A simple three-dimensional form used to study a building's overall shape and volume."},
+    {term:"massing in place", def:"In Revit, a conceptual form modeled directly in the project to study a building's shape on its site."},
+  ]},
+  { num: 5, title: "Materials & Assemblies", words: [
+    {term:"control layers", def:"The layers of a building assembly that control the movement of water, air, heat, and vapor."},
+    {term:"curtain walls", def:"Exterior enclosures held up by the structural frame that carry only their own weight and wind loads."},
+    {term:"steel framing", def:"A skeleton of columns, beams, and girders, usually cut and drilled in a shop, that carries a building's loads."},
+    {term:"open web truss", def:"A lightweight steel member with a zigzag web between its top and bottom chords, used to span floors and roofs."},
+    {term:"structural steel shapes", def:"Standard rolled profiles, such as angles, channels, and I-shaped members, used to make building frames."},
+    {term:"wide flange beam", def:"A steel member shaped like an I or H with broad parallel plates at top and bottom, called a W shape."},
+    {term:"castellated beam", def:"A steel member cut and rewelded to make a deeper section with openings along its web."},
+    {term:"cast in place", def:"Concrete poured and cured in forms at its final location on the site."},
+    {term:"pre-cast", def:"Concrete elements formed and cured off site, then delivered and erected."},
+    {term:"pre-stressed", def:"Concrete reinforced with high-strength steel that is tensioned to keep the concrete under compression."},
+    {term:"cmu", display:"CMU", def:"A hollow concrete block, called a concrete masonry unit, used to build walls."},
+    {term:"brick", def:"A small kiln-fired clay unit laid in courses with mortar to build masonry walls."},
+    {term:"cavity wall", def:"A masonry enclosure made of two layers separated by an air space, which is often insulated."},
+    {term:"glu-lam", display:"Glu-Lam", def:"Glued-laminated timber: layers of lumber bonded with adhesive to make a large beam or column."},
+    {term:"cross-laminated timber", def:"An engineered wood panel made of layers of boards stacked at right angles and glued together."},
+    {term:"dowel-laminated timber", def:"An engineered wood panel made of boards joined with hardwood pins instead of glue."},
+    {term:"hvac systems", display:"HVAC systems", def:"Heating, ventilating, and air-conditioning equipment that conditions a building's indoor air."},
+    {term:"variable air volume", def:"A system that varies the flow of conditioned air with dampers to meet each zone's temperature needs."},
+    {term:"boiler", def:"A heating appliance that heats water, or makes steam, to send warmth through pipes."},
+    {term:"air handler", def:"Equipment that conditions air and circulates it through a building's ductwork."},
+    {term:"chiller", def:"Equipment that cools water for use in a building's air-conditioning system."},
+    {term:"vent stack", def:"A vertical plumbing pipe that admits air to the drainage system to protect trap seals."},
+    {term:"riser diagrams", def:"Drawings that show a building's vertical piping or wiring runs between floors."},
+    {term:"reverberation", def:"The persistence of sound in a room after its source stops, caused by repeated reflections."},
+    {term:"sound absorption", def:"The ability of a material to take in acoustic energy instead of reflecting it."},
+    {term:"sound isolation", def:"Reducing the transmission of noise from one space to another."},
+    {term:"diffusion", def:"The scattering of sound waves in many directions rather than reflecting them in one."},
+    {term:"natural light", def:"Daylight that enters a building through windows and skylights."},
+    {term:"artificial light", def:"Illumination produced by lamps and fixtures rather than by the sun."},
+    {term:"lighting levels", def:"The amount of illumination recommended for a visual task, measured in foot-candles or lux."},
+    {term:"lighting controls", def:"Switches, dimmers, and sensors that decide when and how much light is on."},
+    {term:"assembly layers", def:"The stacked materials that make up a wall, floor, or roof, defined one by one in a Revit type."},
+    {term:"materials", def:"In Revit, named surface and physical definitions, such as brick or concrete, assigned to elements."},
+    {term:"material properties", def:"The appearance and physical settings of a surface finish in Revit, such as color and texture."},
+    {term:"rendering properties", def:"Settings that control how a surface looks in a Revit image, such as reflectivity and gloss."},
+    {term:"drafting views", def:"In Revit, two-dimensional environments used to draw details that are not part of the 3D model."},
+    {term:"cut profile", def:"In Revit, the outline of an element where a plan or section cuts through it."},
+    {term:"detail lines", def:"In Revit, two-dimensional strokes drawn in a single view to add detail without modeling it."},
+    {term:"patterns", def:"In Revit, repeating line or fill designs that represent materials in drawings."},
+    {term:"visibility graphics", def:"In Revit, the settings that control which elements appear in a view and how they display."},
+  ]},
+  { num: 6, title: "Commercial Energy Efficiency", words: [
+    {term:"iecc", display:"IECC", def:"The model code, called the International Energy Conservation Code, that sets minimum energy efficiency requirements for buildings."},
+    {term:"r-value", display:"R-Value", def:"A measure of a material's resistance to heat flow; higher numbers insulate better."},
+    {term:"u-value", display:"U-Value", def:"A measure of how readily heat passes through an assembly; it equals one divided by the total resistance."},
+    {term:"heat gain coefficient", display:"Heat Gain Coefficient", def:"The fraction of the sun's heat that passes through a window, abbreviated SHGC."},
+    {term:"location", def:"A sustainability category about choosing building sites that connect well to the surrounding community."},
+    {term:"transportation", def:"A sustainability category about reducing reliance on cars through transit and walkable access."},
+    {term:"sustainable site", def:"A LEED category about reducing construction pollution, choosing suitable land, protecting habitat, and managing runoff."},
+    {term:"water efficiency", def:"A LEED category about using less drinking water through efficient fixtures, rainwater capture, and graywater."},
+    {term:"energy and atmosphere", def:"A LEED category about improving how efficiently buildings acquire and use power, using renewables, and reducing harmful emissions."},
+    {term:"materials and resources", def:"A LEED category about using local, rapidly renewable, and recycled products and cutting waste."},
+    {term:"indoor environmental quality", def:"A LEED category about the air, daylight, comfort, and control that occupants experience inside."},
+    {term:"carbon sequestration", def:"Capturing and storing atmospheric carbon dioxide, for example in growing trees or in wood products."},
+    {term:"passive house", display:"Passive House", def:"A rigorous energy standard that uses a very airtight, well-insulated envelope to cut heating and cooling needs."},
+    {term:"net zero", display:"Net Zero", def:"Describes a building that produces as much energy as it uses over the course of a year."},
+  ]},
+  { num: 7, title: "Construction Documents I", words: [
+    {term:"cover sheet", def:"The first page of a drawing set, listing the project name, the design team, and an index of sheets."},
+    {term:"specifications", def:"Written descriptions of materials, products, and workmanship that accompany the drawings."},
+    {term:"code sheet", def:"A page that summarizes the building code analysis, such as occupancy, construction type, and egress."},
+    {term:"survey", def:"A drawing by a licensed land professional that shows a site's boundaries, topography, and features."},
+    {term:"demo plans", def:"Drawings that show which existing structures and elements are to be removed."},
+    {term:"site drawings", def:"Plans that show a property's layout, including the building, paving, grading, and utilities."},
+    {term:"foundation plan", def:"A structural drawing that shows the locations and sizes of footings and below-grade walls."},
+    {term:"framing plan", def:"A structural drawing that shows the layout of beams, joists, and columns supporting a floor or roof."},
+    {term:"structural details", def:"Enlarged drawings that show how load-carrying members connect and are reinforced."},
+  ]},
+  { num: 8, title: "Construction Documents II", words: [
+    {term:"floor plans", def:"Drawings of a building cut horizontally and viewed from above to show walls, openings, and rooms."},
+    {term:"elevations", def:"Drawings of a building's faces seen straight on from the side."},
+    {term:"sections", def:"Drawings made by slicing vertically through a building to show its interior and structure."},
+    {term:"wall sections", def:"Detailed vertical cuts through an exterior enclosure showing its layers from foundation to roof."},
+    {term:"details", def:"Enlarged drawings that show how parts of a building are put together."},
+    {term:"interior elevations", def:"Drawings of the walls inside a room, showing cabinets, finishes, and fixtures."},
+    {term:"schedules", def:"Tables on a drawing set that list items such as doors, windows, or finishes and their characteristics."},
+    {term:"mechanical plans", def:"Drawings that show heating, ventilating, and air-conditioning equipment and ductwork."},
+    {term:"electrical plans", def:"Drawings that show power, lighting, and outlet locations and their circuits."},
+    {term:"reflected ceiling plan", def:"A drawing made as though looking up at the overhead surface, showing lights, grids, and other ceiling elements."},
+    {term:"plumbing plans", def:"Drawings that show water supply piping, drainage, vents, and fixtures."},
+    {term:"fire protection plans", def:"Drawings that show sprinklers, standpipes, and other suppression layouts."},
+  ]},
+  { num: 9, title: "Portfolio & Marketing", words: [
+    {term:"portfolio", def:"A curated collection of a designer's best work, used to show skills to employers or schools."},
+    {term:"cover letter", def:"A message sent with a resume that introduces the applicant and explains interest in a position."},
+    {term:"resume", def:"A short summary of a person's education, skills, and work experience."},
+    {term:"professional conduct", def:"Workplace behavior such as honesty, respect, punctuality, and appropriate dress and communication."},
+    {term:"marketing", def:"Activities that promote a person's or a firm's services to potential clients or employers."},
+    {term:"social media awareness", def:"Understanding that public posts shape how employers and clients see you."},
+    {term:"networking", def:"Building professional relationships that can lead to jobs, referrals, and advice."},
+    {term:"website", def:"An online portfolio or firm page that shows work and gives contact information."},
+  ]},
+  { num: 10, title: "Project Management & Affiliations", words: [
+    {term:"aia", display:"AIA", def:"The American Institute of Architects, the national professional association for architects."},
+    {term:"aias", display:"AIAS", def:"The American Institute of Architecture Students, the national organization for architecture students."},
+    {term:"ncarb", display:"NCARB", def:"The National Council of Architectural Registration Boards, which sets standards for architect licensure."},
+    {term:"asid", display:"ASID", def:"The American Society of Interior Designers, a professional association for interior designers."},
+    {term:"asla", display:"ASLA", def:"The American Society of Landscape Architects, a professional association for landscape architects."},
+    {term:"osha", display:"OSHA", def:"The federal agency, the Occupational Safety and Health Administration, that sets workplace safety standards, including for construction sites."},
+    {term:"construction administration", def:"The architect's services while a project is being built, such as site visits, reviewing submittals, and answering contractor questions."},
+    {term:"site visit", def:"An architect's trip to a construction location to observe progress and compare it with the contract documents."},
+    {term:"shop drawings", def:"Detailed fabrication documents prepared by a contractor or supplier showing how a component will be made and installed."},
+  ]},
+];
+
+const TARGET_WORDS = 14;
+const GRID_SIZE = 40;
+
+function normalize(term) {
+  return term.toLowerCase().replace(/[^a-z]/g, "");
+}
+function wordCountOf(term) {
+  return term.split(/[\s\-\/]+/).length;
+}
+function displayOf(entry) {
+  return entry.display || (entry.term.charAt(0).toUpperCase() + entry.term.slice(1));
+}
+
+function makeEmptyGrid() {
+  const g = [];
+  for (let r = 0; r < GRID_SIZE; r++) g.push(new Array(GRID_SIZE).fill(null));
+  return g;
+}
+
+function canPlace(grid, word, row, col, dir) {
+  const len = word.length;
+  if (dir === "across") {
+    if (col < 0 || col + len > GRID_SIZE || row < 0 || row >= GRID_SIZE) return false;
+    if (col - 1 >= 0 && grid[row][col - 1] !== null) return false;
+    if (col + len < GRID_SIZE && grid[row][col + len] !== null) return false;
+    for (let i = 0; i < len; i++) {
+      const c = col + i;
+      const existing = grid[row][c];
+      if (existing !== null && existing !== word[i]) return false;
+      if (existing === null) {
+        if (row - 1 >= 0 && grid[row - 1][c] !== null) return false;
+        if (row + 1 < GRID_SIZE && grid[row + 1][c] !== null) return false;
+      }
+    }
+    return true;
+  } else {
+    if (row < 0 || row + len > GRID_SIZE || col < 0 || col >= GRID_SIZE) return false;
+    if (row - 1 >= 0 && grid[row - 1][col] !== null) return false;
+    if (row + len < GRID_SIZE && grid[row + len][col] !== null) return false;
+    for (let i = 0; i < len; i++) {
+      const r = row + i;
+      const existing = grid[r][col];
+      if (existing !== null && existing !== word[i]) return false;
+      if (existing === null) {
+        if (col - 1 >= 0 && grid[r][col - 1] !== null) return false;
+        if (col + 1 < GRID_SIZE && grid[r][col + 1] !== null) return false;
+      }
+    }
+    return true;
+  }
+}
+
+function place(grid, word, row, col, dir) {
+  for (let i = 0; i < word.length; i++) {
+    if (dir === "across") grid[row][col + i] = word[i];
+    else grid[row + i][col] = word[i];
+  }
+}
+
+function findIntersectionPlacements(grid, word) {
+  const candidates = [];
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const existing = grid[r][c];
+      if (existing === null) continue;
+      for (let i = 0; i < word.length; i++) {
+        if (word[i] !== existing) continue;
+        candidates.push({ row: r, col: c - i, dir: "across" });
+        candidates.push({ row: r - i, col: c, dir: "down" });
+      }
+    }
+  }
+  return candidates;
+}
+
+function generateCrossword(entries, targetCount) {
+  // Defensive: exclude any term too long to safely fit even this grid, with margin.
+  const safeEntries = entries.filter(e => e.answer.length <= GRID_SIZE - 4);
+  const sorted = safeEntries.slice().sort((a, b) => b.answer.length - a.answer.length);
+  const grid = makeEmptyGrid();
+  const placed = [];
+  if (sorted.length === 0) {
+    return { width: 1, height: 1, placed: [] };
+  }
+
+  const first = sorted[0];
+  const startRow = Math.floor(GRID_SIZE / 2);
+  let startCol = Math.floor((GRID_SIZE - first.answer.length) / 2);
+  // Defensive: clamp so the first placement can never start out of bounds.
+  startCol = Math.max(0, Math.min(startCol, GRID_SIZE - first.answer.length));
+  place(grid, first.answer, startRow, startCol, "across");
+  placed.push({ ...first, row: startRow, col: startCol, dir: "across" });
+
+  for (let i = 1; i < sorted.length && placed.length < targetCount; i++) {
+    const entry = sorted[i];
+    const candidates = findIntersectionPlacements(grid, entry.answer);
+    let bestPlacement = null;
+    for (const cand of candidates) {
+      if (canPlace(grid, entry.answer, cand.row, cand.col, cand.dir)) {
+        bestPlacement = cand;
+        break;
+      }
+    }
+    if (bestPlacement) {
+      place(grid, entry.answer, bestPlacement.row, bestPlacement.col, bestPlacement.dir);
+      placed.push({ ...entry, row: bestPlacement.row, col: bestPlacement.col, dir: bestPlacement.dir });
+    }
+  }
+
+  let minR = GRID_SIZE, maxR = -1, minC = GRID_SIZE, maxC = -1;
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (grid[r][c] !== null) {
+        minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+        minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+      }
+    }
+  }
+
+  const trimmed = placed.map(p => ({ ...p, row: p.row - minR, col: p.col - minC }));
+  return { width: maxC - minC + 1, height: maxR - minR + 1, placed: trimmed };
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function dedupedPool(cycleList) {
+  const seen = new Set();
+  const pool = [];
+  cycleList.forEach(c => c.words.forEach(w => {
+    if (!seen.has(w.term)) { seen.add(w.term); pool.push(w); }
+  }));
+  return pool;
+}
+
+function populateCycleSelect() {
+  const sel = document.getElementById("cycle-select");
+  const allOpt = document.createElement("option");
+  allOpt.value = "all";
+  allOpt.textContent = "All Cycles";
+  sel.appendChild(allOpt);
+  CYCLES.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = String(c.num);
+    const rangeLabel = c.num === 1 ? "Cycle 1" : "Cycles 1\u2013" + c.num;
+    opt.textContent = rangeLabel + " \u2014 through " + c.title;
+    sel.appendChild(opt);
+  });
+  sel.value = "all";
+  sel.addEventListener("change", newPuzzle);
+}
+
+function getActivePool() {
+  const sel = document.getElementById("cycle-select");
+  if (sel.value === "all") return dedupedPool(CYCLES);
+  const selectedNum = parseInt(sel.value, 10);
+  return dedupedPool(CYCLES.filter(c => c.num <= selectedNum));
+}
+
+let puzzle = null;
+let cellMeta = null; // cellMeta[r][c] = { number, across: entryIdx or null, down: entryIdx or null }
+let userGrid = null;
+let activeEntryIdx = null;
+let activeDir = "across";
+
+function buildPuzzleFromPool() {
+  const pool = getActivePool();
+  let entries = pool
+    .map(w => ({ answer: normalize(w.term), def: w.def, term: w.term, display: w.display }))
+    .filter(e => e.answer.length >= 3);
+  entries = shuffle(entries);
+  const wantCount = Math.min(TARGET_WORDS, entries.length);
+  // try a few times to get a good placement count
+  let best = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = generateCrossword(shuffle(entries), wantCount);
+    if (!best || candidate.placed.length > best.placed.length) best = candidate;
+    if (best.placed.length >= Math.min(10, wantCount)) break;
+  }
+  return best;
+}
+
+function computeCellMeta(p) {
+  const meta = [];
+  for (let r = 0; r < p.height; r++) {
+    meta.push(new Array(p.width).fill(null).map(() => ({ number: null, across: null, down: null, letter: null })));
+  }
+  p.placed.forEach((entry, idx) => {
+    for (let i = 0; i < entry.answer.length; i++) {
+      const r = entry.dir === "across" ? entry.row : entry.row + i;
+      const c = entry.dir === "across" ? entry.col + i : entry.col;
+      meta[r][c].letter = entry.answer[i];
+      if (entry.dir === "across") meta[r][c].across = idx;
+      else meta[r][c].down = idx;
+    }
+  });
+  // assign numbers: unique starting cells, sorted by row then col
+  const starts = [];
+  p.placed.forEach(entry => {
+    starts.push({ row: entry.row, col: entry.col });
+  });
+  const uniqueStarts = [];
+  const seen = new Set();
+  starts.sort((a, b) => a.row - b.row || a.col - b.col);
+  starts.forEach(s => {
+    const key = s.row + "," + s.col;
+    if (!seen.has(key)) { seen.add(key); uniqueStarts.push(s); }
+  });
+  uniqueStarts.forEach((s, i) => { meta[s.row][s.col].number = i + 1; });
+  return meta;
+}
+
+function newPuzzle() {
+  puzzle = buildPuzzleFromPool();
+  cellMeta = computeCellMeta(puzzle);
+  userGrid = [];
+  for (let r = 0; r < puzzle.height; r++) userGrid.push(new Array(puzzle.width).fill(""));
+  activeEntryIdx = puzzle.placed.length ? 0 : null;
+  activeDir = puzzle.placed.length ? puzzle.placed[0].dir : "across";
+  document.getElementById("result-panel").classList.remove("show");
+  document.getElementById("message").textContent = "";
+  renderGrid();
+  renderClues();
+}
+
+function renderGrid() {
+  const gridEl = document.getElementById("grid");
+  gridEl.innerHTML = "";
+  gridEl.style.gridTemplateColumns = `repeat(${puzzle.width}, 28px)`;
+  gridEl.style.gridTemplateRows = `repeat(${puzzle.height}, 28px)`;
+
+  for (let r = 0; r < puzzle.height; r++) {
+    for (let c = 0; c < puzzle.width; c++) {
+      const meta = cellMeta[r][c];
+      const cellDiv = document.createElement("div");
+      if (!meta.letter) {
+        cellDiv.className = "cell block";
+        gridEl.appendChild(cellDiv);
+        continue;
+      }
+      cellDiv.className = "cell";
+      cellDiv.dataset.row = r;
+      cellDiv.dataset.col = c;
+      if (meta.number) {
+        const num = document.createElement("div");
+        num.className = "num";
+        num.textContent = meta.number;
+        cellDiv.appendChild(num);
+      }
+      const input = document.createElement("input");
+      input.maxLength = 1;
+      input.value = userGrid[r][c] || "";
+      input.addEventListener("focus", () => onCellFocus(r, c));
+      input.addEventListener("input", (e) => onCellInput(r, c, e));
+      input.addEventListener("keydown", (e) => onCellKeydown(r, c, e));
+      cellDiv.appendChild(input);
+      gridEl.appendChild(cellDiv);
+    }
+  }
+  highlightActiveEntry();
+}
+
+function onCellFocus(r, c) {
+  const meta = cellMeta[r][c];
+  if (activeEntryIdx !== null) {
+    const cur = puzzle.placed[activeEntryIdx];
+    const stillOnCurrent = cur.dir === "across"
+      ? (r === cur.row && c >= cur.col && c < cur.col + cur.answer.length)
+      : (c === cur.col && r >= cur.row && r < cur.row + cur.answer.length);
+    if (stillOnCurrent) { highlightActiveEntry(); return; }
+  }
+  if (meta.across !== null) { activeEntryIdx = meta.across; activeDir = "across"; }
+  else if (meta.down !== null) { activeEntryIdx = meta.down; activeDir = "down"; }
+  highlightActiveEntry();
+}
+
+function onCellInput(r, c, e) {
+  const val = e.target.value.replace(/[^a-zA-Z]/g, "").toLowerCase().slice(-1);
+  e.target.value = val;
+  userGrid[r][c] = val;
+  if (val) moveToNext(r, c);
+}
+
+function onCellKeydown(r, c, e) {
+  if (e.key === "Backspace" && !userGrid[r][c]) {
+    moveToPrev(r, c);
+  } else if (e.key === "ArrowRight") { focusCell(r, c + 1); e.preventDefault(); }
+  else if (e.key === "ArrowLeft") { focusCell(r, c - 1); e.preventDefault(); }
+  else if (e.key === "ArrowDown") { focusCell(r + 1, c); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { focusCell(r - 1, c); e.preventDefault(); }
+  else if (e.key === " ") {
+    e.preventDefault();
+    const meta = cellMeta[r][c];
+    if (meta.across !== null && meta.down !== null) {
+      activeDir = activeDir === "across" ? "down" : "across";
+      activeEntryIdx = activeDir === "across" ? meta.across : meta.down;
+      highlightActiveEntry();
+    }
+  }
+}
+
+function focusCell(r, c) {
+  if (r < 0 || c < 0 || r >= puzzle.height || c >= puzzle.width) return;
+  if (!cellMeta[r][c].letter) return;
+  const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"] input`);
+  if (el) el.focus();
+}
+
+function moveToNext(r, c) {
+  if (activeDir === "across") focusCell(r, c + 1);
+  else focusCell(r + 1, c);
+}
+function moveToPrev(r, c) {
+  if (activeDir === "across") focusCell(r, c - 1);
+  else focusCell(r - 1, c);
+}
+
+function highlightActiveEntry() {
+  document.querySelectorAll(".cell").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".clue-item").forEach(el => el.classList.remove("active"));
+  if (activeEntryIdx === null) return;
+  const entry = puzzle.placed[activeEntryIdx];
+  for (let i = 0; i < entry.answer.length; i++) {
+    const r = entry.dir === "across" ? entry.row : entry.row + i;
+    const c = entry.dir === "across" ? entry.col + i : entry.col;
+    const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+    if (el) el.classList.add("active");
+  }
+  const clueEl = document.getElementById("clue-" + activeDir + "-" + activeEntryIdx);
+  if (clueEl) clueEl.classList.add("active");
+}
+
+function renderClues() {
+  const across = document.getElementById("across-list");
+  const down = document.getElementById("down-list");
+  across.innerHTML = "";
+  down.innerHTML = "";
+  puzzle.placed.forEach((entry, idx) => {
+    const num = cellMeta[entry.row][entry.col].number;
+    const wc = wordCountOf(entry.term);
+    const wcNote = wc > 1 ? ` (${wc} words)` : "";
+    const div = document.createElement("div");
+    div.className = "clue-item";
+    div.id = "clue-" + entry.dir + "-" + idx;
+    div.innerHTML = `<b>${num}.</b> ${entry.def}${wcNote}`;
+    div.addEventListener("click", () => {
+      activeEntryIdx = idx;
+      activeDir = entry.dir;
+      focusCell(entry.row, entry.col);
+      highlightActiveEntry();
+    });
+    (entry.dir === "across" ? across : down).appendChild(div);
+  });
+}
+
+function checkAnswers() {
+  let allCorrect = true;
+  let anyFilled = false;
+  for (let r = 0; r < puzzle.height; r++) {
+    for (let c = 0; c < puzzle.width; c++) {
+      const meta = cellMeta[r][c];
+      if (!meta.letter) continue;
+      const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+      el.classList.remove("correct", "incorrect");
+      if (!userGrid[r][c]) { allCorrect = false; continue; }
+      anyFilled = true;
+      if (userGrid[r][c] === meta.letter) el.classList.add("correct");
+      else { el.classList.add("incorrect"); allCorrect = false; }
+    }
+  }
+  const msg = document.getElementById("message");
+  if (!anyFilled) msg.textContent = "Fill in some answers first!";
+  else if (allCorrect) msg.textContent = "All correct! Nice work.";
+  else msg.textContent = "Some letters aren't right yet \u2014 keep going.";
+}
+
+function revealPuzzle() {
+  for (let r = 0; r < puzzle.height; r++) {
+    for (let c = 0; c < puzzle.width; c++) {
+      const meta = cellMeta[r][c];
+      if (!meta.letter) continue;
+      userGrid[r][c] = meta.letter;
+      const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"] input`);
+      if (el) el.value = meta.letter;
+    }
+  }
+  const panel = document.getElementById("result-panel");
+  const list = document.getElementById("reveal-list");
+  list.innerHTML = "";
+  puzzle.placed.forEach((entry, idx) => {
+    const num = cellMeta[entry.row][entry.col].number;
+    const div = document.createElement("div");
+    div.className = "reveal-item";
+    div.innerHTML = `<b>${num} ${entry.dir === "across" ? "Across" : "Down"}:</b> ${displayOf(entry)} \u2014 ${entry.def}`;
+    list.appendChild(div);
+  });
+  panel.classList.add("show");
+  document.getElementById("message").textContent = "";
+}
+
+document.getElementById("new-puzzle-btn").addEventListener("click", newPuzzle);
+document.getElementById("check-btn").addEventListener("click", checkAnswers);
+document.getElementById("reveal-btn").addEventListener("click", revealPuzzle);
+
+populateCycleSelect();
+const urlParams = new URLSearchParams(window.location.search);
+const cycleParam = urlParams.get("cycle");
+if (cycleParam && (cycleParam === "all" || CYCLES.some(c => String(c.num) === cycleParam))) {
+  document.getElementById("cycle-select").value = cycleParam;
+}
+newPuzzle();
+</script>
+</body>
+</html>

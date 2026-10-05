@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CTECS Architecture — Vocabulary Games — Grade 12</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root {
+  --ink: #1C1E21; --sub: #6B7280; --line: #D8D5CC;
+  --bg: #FAF9F6; --card: #FFFFFF;
+  --accent: #2563EB; --accent-soft: #EFF4FF;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #EDEDED; --sub: #9AA0A6; --line: #3A3A3C;
+    --bg: #121213; --card: #1E1E1F; --accent-soft: #1B2A4A;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #EDEDED; --sub: #9AA0A6; --line: #3A3A3C;
+  --bg: #121213; --card: #1E1E1F; --accent-soft: #1B2A4A;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  min-height: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 16px 48px;
+}
+.wrap { width: 100%; max-width: 640px; }
+header { text-align: center; margin-bottom: 28px; }
+h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.02em; }
+.sub { font-size: 14.5px; color: var(--sub); margin: 0; max-width: 46ch; margin-left: auto; margin-right: auto; }
+.games { display: flex; flex-direction: column; gap: 16px; }
+.game-card {
+  display: block; text-decoration: none; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 22px 24px; transition: transform 0.15s, border-color 0.15s;
+}
+.game-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.game-top { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.emoji { font-size: 34px; line-height: 1; }
+.game-title { font-size: 19px; font-weight: 800; margin: 0; }
+.game-desc { font-size: 13.5px; color: var(--sub); margin: 0 0 12px; line-height: 1.45; }
+.play-pill {
+  display: inline-block; background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 700; padding: 7px 16px; border-radius: 999px;
+}
+footer { margin-top: 32px; text-align: center; font-size: 12px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>Architecture Vocabulary Games</h1>
+<p class="sub" style="margin-top:-2px; font-weight:700;">Grade 12</p>
+<p class="sub">Four ways to practice this year's vocabulary — pick a cycle (or all of them) and play.</p>
+</header>
+<div class="games">
+  <a class="game-card" href="archwordle.html">
+    <div class="game-top"><span class="emoji">📐</span><h2 class="game-title">ArchWordle</h2></div>
+    <p class="game-desc">Guess the hidden vocabulary term in 6 tries, Wordle-style. Green means right letter, right spot; yellow means right letter, wrong spot. Works with multi-word terms too — spaces and hyphens are part of the puzzle.</p>
+    <span class="play-pill">Play ArchWordle &rarr;</span>
+  </a>
+  <a class="game-card" href="archcrossword.html">
+    <div class="game-top"><span class="emoji">🧩</span><h2 class="game-title">ArchCrossword</h2></div>
+    <p class="game-desc">A fresh crossword puzzle generated from this year's vocabulary every time you play. Clues are the real definitions — fill in the grid, check your answers, or reveal the full solution.</p>
+    <span class="play-pill">Play ArchCrossword &rarr;</span>
+  </a>
+  <a class="game-card" href="archwordsearch.html">
+    <div class="game-top"><span class="emoji">🔍</span><h2 class="game-title">ArchWordSearch</h2></div>
+    <p class="game-desc">Read a definition, figure out the term, then find it hidden in the grid — forwards, backwards, or diagonal. Covers every term from the cycles you choose, not just a handful.</p>
+    <span class="play-pill">Play ArchWordSearch &rarr;</span>
+  </a>
+  <a class="game-card" href="archjumble.html">
+    <div class="game-top"><span class="emoji">🔤</span><h2 class="game-title">ArchJumble</h2></div>
+    <p class="game-desc">Unscramble the letters to spell this year's vocabulary terms — no clue given upfront. Solve it to reveal the definition, and keep an eye on your streak.</p>
+    <span class="play-pill">Play ArchJumble &rarr;</span>
+  </a>
+</div>
+<footer>CTECS Architecture &middot; Vocabulary Practice</footer>
+</div>
+</body>
+</html>
